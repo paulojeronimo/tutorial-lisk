@@ -1,0 +1,270 @@
+= Tutorial - Lisk.io
+:toc:
+:toc-title: Conteúdo
+:toclevels: 4
+:numbered:
+
+== Introdução
+
+* Tutorial, *[red]#EM CONSTRUÇÃO#*, sobre o http://lisk.io.
+
+== Criando e iniciando o Lisk Testnet no OS X
+
+* Referências:
+** https://lisk.io/documentation?i=lisk-dapps-docs/EnvironmentSetup
+
+[source,bash]
+----
+docker-machine create -d=virtualbox dev
+docker-machine ls
+eval "$(docker-machine env dev)"
+docker pull lisk/testnet
+docker run -d --restart=always -p 0.0.0.0:7000:7000 lisk/testnet
+----
+
+== Acessando o Lisk
+
+O servidor em execução pode ser acessado através do endereço http://192.168.99.100:7000.
+
+=== Criação da passphrase
+
+Minha escolha: `drift donor hunt angry divorce issue kit swarm apart nothing caught rebel`.
+
+== Gerenciando o Lisk Testnet
+
+* Referências:
+** https://lisk.io/documentation?i=lisk-docs/DockerInstall
+
+=== Obtendo e salvando o nome do contêiner (container_id)
+
+    container_id=$(docker ps --filter ancestor=lisk/testnet --format "{{.Names}}")
+
+=== Monitorando as últimas 500 linhas do log de execução do contêiner
+
+    docker logs --tail=50 -f $container_id
+
+=== Parando o contêiner
+
+    docker stop $contaienr_id
+
+=== Iniciando o contêiner
+
+    docker start $container_id
+
+=== Reiniciando o contêiner
+
+    docker restart $container_id
+
+== Instalando e testando o lisk-cli
+
+* Referências:
+** https://lisk.io/documentation?i=lisk-dapps-docs/EnvironmentSetup
+
+    npm install -g lisk-cli
+    lisk-cli -h
+
+== Criando uma dapp
+
+* Referências:
+** https://lisk.io/documentation?i=lisk-dapps-docs/BasicApp
+
+    lisk-cli dapps -a
+
+=== Possíveis problemas/soluções
+
+==== Falha na execução do comando git clone
+
+Se ocorrer uma falha na execução do comando `git clone git://...` pode ser que você não tenha sua chave SSH pública configurada no GitHub. Nesse caso, você deverá copiar o seu conteúdo:
+
+    pbcopy < ~/.ssh/id_rsa.pub
+
+Em seguida, adicione uma nova chave no GitHub acessando a URL https://github.com/settings/ssh e clicando no botão `New SSH key`.
+
+==== Error: ENOENT: no such file or directory, open 'config.json'
+
+----
+Fetching Lisk Dapps SDK
+Connecting local repository with origin
+lisk-dapps-sdk@1.0.0 dapps/6202034306725250304
+...
+...
+...
+Saving genesis block
+Updating config
+{ Error: ENOENT: no such file or directory, open 'config.json'
+    at Error (native)
+    at Object.fs.openSync (fs.js:634:18)
+    at Object.fs.readFileSync (fs.js:502:33)
+    at /usr/local/lib/node_modules/lisk-cli/index.js:279:46
+    at /usr/local/lib/node_modules/npm/lib/install.js:300:7
+    at LOOP (/usr/local/lib/node_modules/npm/node_modules/slide/lib/chain.js:7:26)
+    at /usr/local/lib/node_modules/npm/node_modules/slide/lib/chain.js:18:7
+    at /usr/local/lib/node_modules/npm/lib/install.js:689:7
+    at Function.ls.fromTree (/usr/local/lib/node_modules/npm/lib/ls.js:104:3)
+    at /usr/local/lib/node_modules/npm/lib/install.js:687:8
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'config.json' }
+----
+
+== Vagrant
+
+=== Teste 1
+
+* Objetivo: utilizar o Docker dentro de uma box Vagrant para obter maior controle dos passos dentro da VM.
+* Resultado: falhas, como no caso de uso do docker-machine ...
+* Referências:
+** https://atlas.hashicorp.com/box-cutter/boxes/ubuntu1404-docker
+** https://lisk.io/documentation?i=lisk-docs/SourceInstall
+** http://askubuntu.com/questions/99774/exclude-packages-from-apt-get-upgrade
+** https://github.com/LiskHQ/lisk-docker
+
+* Criação do Vagrantfile ...
+
+----
+cat > Vagrantfile <<'EOF'
+# vi: set ft=ruby ts=2 sw=2 expandtab:
+Vagrant.configure(2) do |config|
+  #config.vm.box = "boxcutter/ubuntu1404-docker"
+  config.vm.box = "ubuntu/trusty64"
+  config.vm.provider :virtualbox do |vb|
+    vb.customize [
+      "modifyvm", :id, 
+      "--memory", "1024",
+      "--name", "lisk"
+    ]
+  end
+  config.vm.network "forwarded_port", guest: 7000, host: 7000
+  config.vm.network "forwarded_port", guest: 8000, host: 8000
+end
+EOF
+----
+
+* Criação da Box ...
+
+----
+# Editar o Vagrantfile para usar o boxcutter/ubuntu1404-docker
+vagrant up
+vagrant ssh
+docker pull lisk/testnet
+docker save -o /vagrant/docker-lisk-testnet.tar lisk/testnet
+# Acesso: http://loclahost:7000
+# Passphrase: `nurse giraffe bicycle hole crop lemon blanket shell flag used burger wrong`
+curl -sL https://downloads.lisk.io/scripts/setup_postgresql.Linux | bash -
+psql --version
+sudo -u postgres createdb lisk_test
+sudo -u postgres createuser --createdb --password lisk
+
+curl -sL https://deb.nodesource.com/setup_0.12 | sudo -E bash -
+sudo apt-get update
+sudo apt-get install -y curl build-essential gzip python tar wget git nodejs vim
+node -v; npm -v
+
+wget https://downloads.lisk.io/lisk/test/lisk-source.tar.gz
+tar -zxvf lisk-source.tar.gz
+cd lisk-source
+npm install --production
+
+wget https://downloads.lisk.io/lisk-node/lisk-node-Linux-x86_64.tar.gz
+
+sudo npm install -g lisk-cli
+list-cli -h
+ssh-keygent
+cat ~/.ssh/id_rsa.pub
+----
+
+=== Teste 2
+
+* Tentativa de seguir o https://github.com/LiskHQ/lisk-docs/blob/master/BinaryInstall.md.
+
+----
+vagrant destroy
+vagrant up
+vagrant ssh
+wget https://downloads.lisk.io/lisk/test/installLisk.sh
+bash installLisk.sh install
+cd lisk
+source env.sh
+echo "source $(pwd)/env.sh" >> ~/.bash_profile
+# Passphrase: `soap snack goat scissors zoo ready casual level engine secret velvet eight`
+curl -sL https://deb.nodesource.com/setup_0.12 | sudo -E bash -
+sudo apt-get install -y nodejs
+node -v
+npm -v
+# https://lisk.io/documentation?i=lisk-dapps-docs/EnvironmentSetup
+sudo npm install lisk-cli
+lisk-cli -h
+ssh_keygen
+# Copiar o resultado do comando abaixo para o clipboard e salvá-lo como uma nova chave ssh no GitHub ...
+cat ~/.ssh/id_rsa.pub
+sudo apt-get install -y git
+list-cli dapps -a
+# Ao final do comando acima, será gerado o id da app. Exemplo:
+# Done (DApp id is 3930284388356486529)
+----
+
+=== Teste 3
+
+* Tentativa de reproduzir, na box, os passos demonstrados no vídeo https://www.youtube.com/watch?v=xAqa0UJimdY.
+* Resultado: ainda não concluído.
+* Referências:
+** https://github.com/liskhq/lisk
+** https://github.com/MaxKK/guestbookDapp
+
+----
+vagran destroy
+vagrant up
+vagrant ssh
+sudo apt-get update
+# Instalar pacotes necessários:
+sudo apt-get install -y build-essential git
+# Instalar pacotes e fazer configurações a teu gosto:
+sudo apt-get install -y vim tree
+git config --global user.name 'Paulo Jerônimo'
+git config --global user.email 'paulojeronimo@gmail.com'
+# Instalar o Postgres e criar o banco:
+curl -sL "https://downloads.lisk.io/scripts/setup_postgresql.Linux" | bash -
+sudo -u postgres createuser --createdb $USER
+createdb lisk_test
+psql -qd postgres -c "ALTER USER "$USER" WITH PASSWORD 'password';"
+# Instalar o Node.js:
+curl -sL https://deb.nodesource.com/setup_0.12 | sudo -E bash -
+sudo apt-get install -y nodejs
+sudo npm install grunt-cli -g
+sudo npm install bower -g
+# Gerar chaves SSH:
+ssh-keygen
+# Copiar, como uma nova chave para o GitHub, a saída do comando abaixo:
+cat ~/.ssh/id_rsa.pub
+# Clonar o lisk:
+git clone git@github.com:LiskHQ/lisk.git
+cd lisk/
+npm install
+# Instalar a versão customizada (pelo lisk) do Node.js ...
+wget https://downloads.lisk.io/lisk-node/lisk-node-Linux-x86_64.tar.gz -O - | tar xvfz -
+# Instalar o lisk-cli
+sudo npm install lisk-cli -g
+# Criar a dapp
+lisk-cli dapps -g
+cd dapps
+git clone ...
+rm guestBoook/genesis.json
+cp [id]/genesis.json guestBook/
+#rm -rf [id]
+mv guestBook/ [id]/
+# Baixar os submodulos
+git submodule init
+git submodule update
+cd public
+npm install
+bower install
+grunt release
+cd ..
+cp /vagrant/lisk/config.json .
+wget http://downloads.lisk.io/lisk/main/blockchain.db.gz -O - | gunzip > blockchain.db
+psql -qd lisk_main < blockchain.db
+node app.js
+----
+
+// vim: set syntax=asciidoc:
